@@ -126,6 +126,8 @@ class BarChartViewController: DemoBaseViewController {
         var set1: BarChartDataSet! = nil
         if let set = chartView.data?.dataSets.first as? BarChartDataSet {
             set1 = set
+            set1.roundedCorners = [.topLeft, .topRight]
+            set1.radius = 2.0
             set1.replaceEntries(yVals)
             chartView.data?.notifyDataChanged()
             chartView.notifyDataSetChanged()
@@ -133,9 +135,10 @@ class BarChartViewController: DemoBaseViewController {
             set1 = BarChartDataSet(entries: yVals, label: "The year 2017")
             set1.colors = ChartColorTemplates.material()
             set1.drawValuesEnabled = false
-            
+            set1.roundedCorners = [.topLeft, .topRight]
+            set1.radius = 2.0
             let data = BarChartData(dataSet: set1)
-            data.setValueFont(UIFont(name: "HelveticaNeue-Light", size: 10)!)
+            data.setValueFont(UIFont.systemFont(ofSize: 10))
             data.barWidth = 0.9
             chartView.data = data
         }

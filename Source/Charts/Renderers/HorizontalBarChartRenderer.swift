@@ -243,57 +243,79 @@ open class HorizontalBarChartRenderer: BarChartRenderer
         {
             context.setFillColor(dataSet.color(atIndex: 0).cgColor)
         }
-
+        
+        context.setStrokeColor(borderColor.cgColor)
+        context.setLineWidth(borderWidth)
+        context.setLineCap(.square)
+        
         // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrdereredElements
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
-        for j in stride(from: 0, to: buffer.rects.count, by: 1)
+        for j in stride(from: 0, to: buffer.rects.count, by: stackSize)
         {
-            let barRect = buffer.rects[j]
+            context.saveGState()
             
-            if (!viewPortHandler.isInBoundsTop(barRect.origin.y + barRect.size.height))
-            {
-                break
-            }
+            let lastIndexInBar = j + stackSize - 1
+            let leftRectInBar = findMostLeftRectInBar(barRects: buffer.rects,
+                                                      firstIndexInBar: j,
+                                                      lastIndexInBar: lastIndexInBar)
+
+            let path = createBarPath(for: leftRectInBar, roundedCorners: dataSet.roundedCorners, radius: dataSet.radius)
+            context.addPath(path.cgPath)
+            context.clip()
             
-            if (!viewPortHandler.isInBoundsBottom(barRect.origin.y))
-            {
-                continue
-            }
-            
-            if !isSingleColor
-            {
-                // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                context.setFillColor(dataSet.color(atIndex: j).cgColor)
-            }
-
-            context.fill(barRect)
-
-            if drawBorder
-            {
-                context.setStrokeColor(borderColor.cgColor)
-                context.setLineWidth(borderWidth)
-                context.stroke(barRect)
-            }
-
-            // Create and append the corresponding accessibility element to accessibilityOrderedElements (see BarChartRenderer)
-            if let chart = dataProvider as? BarChartView
-            {
-                let element = createAccessibleElement(withIndex: j,
-                                                      container: chart,
-                                                      dataSet: dataSet,
-                                                      dataSetIndex: index,
-                                                      stackSize: stackSize)
-                { (element) in
-                    element.accessibilityFrame = barRect
+            for index in j...lastIndexInBar {
+                let barRect = buffer.rects[j]
+                
+                if (!viewPortHandler.isInBoundsTop(barRect.origin.y + barRect.size.height))
+                {
+                    break
+                }
+                
+                if (!viewPortHandler.isInBoundsBottom(barRect.origin.y))
+                {
+                    continue
+                }
+                
+                if !isSingleColor
+                {
+                    // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
+                    context.setFillColor(dataSet.color(atIndex: j).cgColor)
                 }
 
-                accessibilityOrderedElements[j/stackSize].append(element)
+                context.fill(barRect)
+
+                if drawBorder
+                {
+                    context.setStrokeColor(borderColor.cgColor)
+                    context.setLineWidth(borderWidth)
+                    context.stroke(barRect)
+                }
+
+                // Create and append the corresponding accessibility element to accessibilityOrderedElements (see BarChartRenderer)
+                if let chart = dataProvider as? BarChartView
+                {
+                    let element = createAccessibleElement(withIndex: j,
+                                                          container: chart,
+                                                          dataSet: dataSet,
+                                                          dataSetIndex: index,
+                                                          stackSize: stackSize)
+                    { (element) in
+                        element.accessibilityFrame = barRect
+                    }
+
+                    accessibilityOrderedElements[j/stackSize].append(element)
+                }
+            }
+            context.restoreGState()
+            if drawBorder {
+                context.addPath(path.cgPath)
+                context.strokePath()
             }
         }
         
-        context.restoreGState()
+        //context.restoreGState()
     }
     
     open override func prepareBarHighlight(
@@ -628,5 +650,32 @@ open class HorizontalBarChartRenderer: BarChartRenderer
     internal override func setHighlightDrawPos(highlight high: Highlight, barRect: CGRect)
     {
         high.setDraw(x: barRect.midY, y: barRect.origin.x + barRect.size.width)
+    }
+    
+    override internal func createBarPath(for rect: CGRect, roundedCorners: UIRectCorner, radius: CGFloat) -> UIBezierPath {
+        let tempRadus: CGFloat = rect.height / 2.0 < radius ? 0.0 : radius
+        let path = UIBezierPath(roundedRect: rect,
+                                byRoundingCorners: roundedCorners,
+                                cornerRadii: CGSize(width: tempRadus, height: tempRadus))
+
+        return path
+    }
+    
+    private func findMostLeftRectInBar(barRects: [CGRect], firstIndexInBar: Int, lastIndexInBar: Int) -> CGRect {
+        if firstIndexInBar < barRects.count {
+            var leftRectInBar = barRects[firstIndexInBar]
+            if lastIndexInBar < barRects.count {
+                if barRects[lastIndexInBar].origin.x < leftRectInBar.origin.x {
+                    leftRectInBar = barRects[lastIndexInBar]
+                }
+                var width: CGFloat = 0
+                for index in firstIndexInBar...lastIndexInBar {
+                    width += barRects[index].width
+                }
+                leftRectInBar.size.width = width
+                return leftRectInBar
+            }
+        }
+        return .zero
     }
 }
