@@ -405,6 +405,10 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         if isSingleColor
         {
             context.setFillColor(dataSet.color(atIndex: 0).cgColor)
+        }else{
+            guard let gradient = CGGradient(colorsSpace: nil, colors: dataSet.colors as CFArray, locations: nil)
+            else { return }
+            context.drawLinearGradient(gradient, start: CGPoint(x:0.0,y:0.0), end: CGPoint(x: 0.0,y: 1.0), options:[])
         }
 
         context.setStrokeColor(borderColor.cgColor)
@@ -439,7 +443,10 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 if !isSingleColor
                 {
                     // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                    context.setFillColor(dataSet.color(atIndex: j).cgColor)
+                    //context.setFillColor(dataSet.color(atIndex: j).cgColor)
+                    guard let gradient = CGGradient(colorsSpace: nil, colors: dataSet.colors as CFArray, locations: nil)
+                    else { return }
+                    context.drawLinearGradient(gradient, start: CGPoint(x:0.0,y:0.0), end: CGPoint(x: 0.0,y: 1.0), options:[])
                 }
                 context.addRect(barRect)
                 context.fillPath()
